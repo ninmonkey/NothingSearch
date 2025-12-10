@@ -16,6 +16,12 @@ $commands_public   = @(
     | Where-Object name -NotMatch '^Scrap'
     | ? Extension -in '.ps1' #, '.psm1', '.psd1'
 )
+$commands_private   = @(
+    $potentialDirectory = 'Commands\Private'
+    @( Join-Path $myRoot $potentialDirectory | Get-ChildItem -ea ignore -Recurse )
+    | Where-Object name -NotMatch '^Scrap'
+    | ? Extension -in '.ps1' #, '.psm1', '.psd1'
+)
 
 [Collections.Generic.List[object]] $commands_summary = @()
 $commands_summary.AddRange(
@@ -38,6 +44,26 @@ $commands_summary.AddRange(
         }
     )
 )
+$commands_summary.AddRange(
+    @(
+        $commands_private
+        | %{
+            $item = $_
+            [pscustomobject]@{
+                PSTypeName    = 'build.NothingSearch.command.private'
+                Public        = $false
+                Name          = $Item.Name
+                Size          = '{0:n2} kb' -f ( $Item.Length / 1kb )
+                LastWriteTime = $Item.LastWriteTime
+                # Path          = $Item
+                FullName      = $Item                                  # convert to alias
+                # Documentation = ''
+                # HasRequiresStatment        = $false
+                # HasUsingNamespaceStatement = $false
+            }
+        }
+    )
+)
 
 $destinationRoot = $myRoot
 
@@ -48,18 +74,26 @@ $commands_summary
     | Write-Host -fg 'magenta'
 Pop-Location -Stack 'NothingSearch.build'
 
+
 if( $commands_summary.count -gt 0 ) {
     $myModuleFile = Join-Path $DestinationRoot "${myModuleName}.psm1"
+    Clear-Content -Path $MyModuleFile -ea 'stop'
 
     @(
+        foreach ( $item in ( $commands_summary | ? Public ) )  {
+            ( Get-Content -raw (Get-Item $item.FullName ) ) -replace '\r?\n', $BuildConfig.LineEnding
+        }
         # todo: optimize IO. And minimize any extra memory allocations for strings
-        foreach ( $item in $commands_summary )  {
+        foreach ( $item in ( $commands_summary | ? -Not Public ) )  {
             ( Get-Content -raw (Get-Item $item.FullName ) ) -replace '\r?\n', $BuildConfig.LineEnding
         }
     )
     | Join-String -sep $BuildConfig.LineEnding
-    | Set-Content -Path $MyModuleFile -encoding UTF8 -ProgressAction Continue # -Confirm
+    | Add-Content -Path $MyModuleFile -encoding UTF8 -ProgressAction Continue # -Confirm
 }
+'See: $__LastBuildCommandSummary' | Write-host -fg 'orange'
+$script:__LastBuildCommandSummary = $commands_summary
+
 return
 if ($commands_public) {
     $myFormatFile = Join-Path $destinationRoot "$myModuleName.format.ps1xml"
