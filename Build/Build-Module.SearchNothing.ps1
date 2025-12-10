@@ -11,10 +11,8 @@ $BuildConfig = @{
 
 Push-Location -Stack 'NothingSearch.build' $myRoot
 $commands_public   = @(
-    # to recurse or not ?
-    @( foreach ($potentialDirectory in 'Commands') {
-        Join-Path $myRoot $potentialDirectory | Get-ChildItem -ea ignore
-    })
+    $potentialDirectory = 'Commands\Public'
+    @( Join-Path $myRoot $potentialDirectory | Get-ChildItem -ea ignore -Recurse )
     | Where-Object name -NotMatch '^Scrap'
     | ? Extension -in '.ps1' #, '.psm1', '.psd1'
 )
