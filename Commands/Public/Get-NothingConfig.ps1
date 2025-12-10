@@ -16,7 +16,10 @@ function Get-NothingConfig {
     .example
         # longest/full list of all file
         > Get-NothingConfig -All -IncludeBackups
-
+    .LINK
+        Get-NothingConfig
+    .LINK
+        Get-NothingConfigContent
     #>
     [Alias( 'Ns.Get-Config' )]
     [OutputType( [System.IO.FileInfo] )]
