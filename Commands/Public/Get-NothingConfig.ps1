@@ -6,7 +6,17 @@ function Get-NothingConfig {
     .notes
         if user has 'es.cmd' installed, it may be at: "gci ( Join-Path $Env:LOCALAPPDATA 'Microsoft\WindowsApps' )"
     .example
+        # Find 'Everything(-version).ini
         > Get-NothingConfig
+    .example
+        # All saved settings, other than the ini itself.
+        > Get-NothingConfig -Csv
+
+            Bookmarks-1.5a.csv, Filters-1.5a.csv, Macros-1.5a.csv, Run History-1.5a.csv, Search History-1.5a.csv
+    .example
+        # longest/full list of all file
+        > Get-NothingConfig -All -IncludeBackups
+
     #>
     [Alias( 'Ns.Get-Config' )]
     [OutputType( [System.IO.FileInfo] )]
@@ -14,10 +24,23 @@ function Get-NothingConfig {
     param(
         # Includes Csv
         [Alias('All')]
-        [switch] $ListAll
+        [switch] $ListAll,
+
+        # data files, the live search, filters, bookmarks, etc.
+        [Alias('CsvOnly')]
+        [switch] $ListCsv,
+
+        # By default, it ignores 'foo.backup.csv'
+        [switch] $IncludeBackups
     )
     process {
-        Get-ChildItem -path ( join-path $Env:AppData 'Everything' )
+        $files = Get-ChildItem -Recurse:$false -path ( join-path $Env:AppData 'Everything' )
+        if( -not $IncludeBackups ) { $files = $Files | ? Name -notmatch '\.backup\.' }
+
+        if( $ListCsv ) {
+            return $files | ?{ $_.Extension -in ('.csv') }
+        }
+        $files
             | Where-Object {
                 if( $ListAll ) { return $true }
                 if ( $_.Name -eq 'Everything.Ini' ) { return $true }
